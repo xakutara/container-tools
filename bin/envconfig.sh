@@ -30,9 +30,7 @@
 set -e
 
 find_and_replace() {
-  awk -v find="$1" -v repl="$2" \
-    's=index($0,find){$0=substr($0,1,s-1) repl substr($0,s+length(find))}1' \
-    "$3" > "$3".tmp && mv "$3".tmp "$3"
+  awk -v find="$1" -v repl="$2" '{gsub(find,repl,$0);print $0}'
 }
 
 write_config() {
@@ -48,7 +46,9 @@ write_config() {
     # Check if the file exists and has a size greater than zero:
     if [ -s "$path" ]; then
       # Replace the placeholder with the environment variable:
-      find_and_replace "{{$name}}" "$value" "$path"
+      local tmpfile="$(mktemp)"
+      cat "$path" | find_and_replace "{{$name}}" "$value" > "$tmpfile"
+      mv "$tmpfile" "$path"
     else
       # Create the path if it doesn't exist:
       mkdir -p "$(dirname "$path")"
