@@ -37,25 +37,30 @@ process() {
   done
 }
 
-# Rebuild the command string with quoted arguments:
-CMD=""
-for arg in "$@"; do
-  # Escape single quotes:
-  arg="$(echo "$arg" | sed "s/'/'\\\''/g")"
-  case "$arg" in
-    # Quote arguments containing characters not in the whitelist:
-    *[!a-zA-Z0-9_-]*)
-      CMD="$CMD'$arg' ";;
-    *)
-      CMD="$CMD$arg ";;
-  esac
-done
+# Returns a string with the quoted arguments:
+quote() {
+  local args=""
+  for arg; do
+    # Escape single quotes:
+    arg="$(echo "$arg" | sed "s/'/'\\\''/g")"
+    case "$arg" in
+      # Quote arguments containing characters not in the whitelist:
+      *[!a-zA-Z0-9_-]*)
+        args="$args'$arg' ";;
+      *)
+        args="$args$arg ";;
+    esac
+  done
+  echo "$args"
+}
 
 # Log the command:
-log cmd "$CMD"
+log cmd "$(quote "$@")"
 
 # Set line buffered mode if the stdbuf command is available:
-CMD="$(command -v stdbuf > /dev/null 2>&1 && echo 'stdbuf -oL -eL ')$CMD"
+if [ $# -gt 0 ] && command -v stdbuf > /dev/null 2>&1; then
+  set -- stdbuf -oL -eL "$@"
+fi
 
 # Execute the command and log stdout and stderr:
-{ eval "$CMD" 2>&3 | process out; } 3>&1 1>&2 | process err
+{ "$@" 2>&3 | process out; } 3>&1 1>&2 | process err
