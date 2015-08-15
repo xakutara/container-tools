@@ -2,13 +2,13 @@
 
 - [Description](#description)
 - [Tools](#tools)
-  - [envconfig.sh](#envconfigsh)
+  - [envconfig](#envconfig)
     - [Usage](#usage)
     - [Configuration](#configuration)
-  - [log.sh](#logsh)
+  - [log](#log)
     - [Usage](#usage-1)
     - [Configuration](#configuration-1)
-  - [superd.sh](#superdsh)
+  - [superd](#superd)
     - [Usage](#usage-2)
     - [Configuration](#configuration-2)
 - [License](#license)
@@ -24,9 +24,9 @@ environments and non-containerized Linux machines.
 
 ## Tools
 
-### envconfig.sh
-Wrapper script to write environment variables in config files.
-Replaces placeholders and creates files, then starts the given command.
+### envconfig
+[envconfig.sh](bin/envconfig.sh) is a wrapper script to write environment variables in config files.
+It replaces placeholders and creates files, then starts the given command.
 
 #### Usage
 
@@ -55,9 +55,9 @@ Placeholders in config files must have the following format:
 {{VARIABLE_NAME}}
 ```
 
-### log.sh
-Executes the given command and logs the output.  
-Adds a datetime prefix in front of each output line.
+### log
+[log.sh](bin/log.sh) executes the given command and logs the output.  
+A datetime prefix is added in front of each output line.
 
 #### Usage
 
@@ -80,9 +80,9 @@ with the following environment variable:
 DATECMD="date -u +%Y-%m-%dT%H:%M:%SZ"
 ```
 
-### superd.sh
-Supervisor daemon to manage long running processes as a group.  
-Terminates all remaining child processes as soon as one child exits.  
+### superd
+[superd.sh](bin/superd.sh) is a supervisor daemon to manage long running processes as a group.  
+All remaining child processes are terminated as soon as one child exits.  
 Written as entrypoint service for multi-process docker containers.
 
 #### Usage
