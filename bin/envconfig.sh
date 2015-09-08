@@ -48,7 +48,8 @@ write_config() {
       # Replace the placeholder with the environment variable:
       local tmpfile="$(mktemp)"
       cat "$path" | find_and_replace "{{$name}}" "$value" > "$tmpfile"
-      mv "$tmpfile" "$path"
+      # Override the original file without changing permissions or ownership:
+      cat "$tmpfile" > "$path" && rm "$tmpfile"
     else
       # Create the path if it doesn't exist:
       mkdir -p "$(dirname "$path")"
