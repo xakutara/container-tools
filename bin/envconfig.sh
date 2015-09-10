@@ -3,13 +3,12 @@
 #
 # Wrapper script to write environment variables in config files.
 # Replaces placeholders and creates files, then starts the given command.
+# Supports multiline variables and base64 encoded data.
 #
-# Usage: ./envconfig.sh [-e config_env] [-f config_file] [command] [args...]
+# Usage: ./envconfig.sh [-f config_file] [command] [args...]
 #
 # The default envconfig configuration file is "/usr/local/etc/envconfig.conf".
 # An alternate configuration file can be provided via -f option.
-# An environment variable with configuration can be provided via -e option.
-# Mappings provided via environment variable will be written first.
 #
 # Each line of the configuration for envconfig must have the following format:
 # VARIABLE_NAME /absolute/path/to/config/file
@@ -18,6 +17,11 @@
 #
 # Placeholders in config files must have the following format:
 # {{VARIABLE_NAME}}
+#
+# Variable content can be provided in base64 encoded form, given the following:
+# The base64 data must be provided in a variable with "B64_" prefix.
+# The decoded data will then be used for the variable without the prefix.
+# For example, the content of $B64_DATA will be decoded and stored in $DATA.
 #
 # Copyright 2015, Sebastian Tschan
 # https://blueimp.net
@@ -29,11 +33,35 @@
 # Exit immediately if a command exits with a non-zero status:
 set -e
 
-find_and_replace() {
-  awk -v find="$1" -v repl="$2" '{gsub(find,repl,$0);print $0}'
+# Determine the platform dependent base64 decode argument:
+if [ "$(echo 'eA==' | base64 -d 2> /dev/null)" = 'x' ]; then
+  BASE64_DECODE_ARG='-d'
+else
+  BASE64_DECODE_ARG='--decode'
+fi
+
+# Interpolates the given name:
+interpolate() {
+  # Check if a variable with the given name plus "B64_" prefix exists:
+  if eval 'test ! -z "${B64_'$1'+x}"'; then
+    # Return the decoded content of the "B64_" variable:
+    eval 'echo "$B64_'$1'"' | tr -d '\n' | base64 "$BASE64_DECODE_ARG"
+  else
+    # Interpolate the name as environment variable, print to stderr if unset:
+    eval 'printf "%s" "${'$1'?}"'
+  fi
 }
 
-write_config() {
+# Global search and replace with the given pattern and replacement arguments:
+gsub() {
+  # In sed replacement strings, slash, backslash and ampersand must be escaped.
+  # Multiline strings are allowed, but must escape newlines with a backslash.
+  # Therefore, the last sed sub call adds a backslash to all but the last line:
+  sed "s/$1/$(echo "$2" | sed 's/[/\&]/\\&/g' | sed '$!s/$/\\/g')/g"
+}
+
+# Parses the given config file and writes the env config:
+write_envconfig() {
   while read line; do
     # Skip empty lines and lines starting with a hash (#):
     ([ -z "$line" ] || [ "${line#\#}" != "$line" ]) && continue
@@ -41,44 +69,32 @@ write_config() {
     local name="${line%% *}"
     # Extract the remainder as path and trim any surrounding whitespace:
     local path="$(echo ${line#* })"
-    # Evaluate the name as environment variable, print error if unset:
-    local value="$(eval 'echo "${'$name'?}"')"
     # Check if the file exists and has a size greater than zero:
     if [ -s "$path" ]; then
+      local tmpfile="$(mktemp "${TMPDIR:-/tmp}/$name.XXXXXXXXXX")"
       # Replace the placeholder with the environment variable:
-      local tmpfile="$(mktemp)"
-      cat "$path" | find_and_replace "{{$name}}" "$value" > "$tmpfile"
+      cat "$path" | gsub "{{$name}}" "$(interpolate "$name")" > "$tmpfile"
       # Override the original file without changing permissions or ownership:
       cat "$tmpfile" > "$path" && rm "$tmpfile"
     else
       # Create the path if it doesn't exist:
       mkdir -p "$(dirname "$path")"
       # Set the environment variable as file content:
-      echo "$value" >> "$path"
+      echo "$(interpolate "$name")" >> "$path"
     fi
   # Use the given config file as input:
   done < "$1"
 }
 
-# Check if envconfig configuration is provided via environment variable:
-if [ "$1" = "-e" ]; then
-  # Write the environment variable to a temporary file, fail if unset:
-  eval 'echo "${'$2'?}"' > /tmp/envconfig.conf
-  # Use the temporary file to write the env config:
-  write_config /tmp/envconfig.conf
-  # Shift the arguments list to remove the given -e option:
-  shift 2
-fi
-
 # Check if the config file is provided via command line:
 if [ "$1" = "-f" ]; then
   # Use the given config file to write the env config:
-  write_config "$2"
+  write_envconfig "$2"
   # Shift the arguments list to remove the given -f option:
   shift 2
 else
   # Use the default config file to write the env config:
-  write_config '/usr/local/etc/envconfig.conf'
+  write_envconfig '/usr/local/etc/envconfig.conf'
 fi
 
 # Execute the given command (with the given arguments):
