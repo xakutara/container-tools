@@ -57,7 +57,7 @@ gsub() {
   # In sed replacement strings, slash, backslash and ampersand must be escaped.
   # Multiline strings are allowed, but must escape newlines with a backslash.
   # Therefore, the last sed sub call adds a backslash to all but the last line:
-  sed "s/$1/$(echo "$2" | sed 's/[/\&]/\\&/g' | sed '$!s/$/\\/g')/g"
+  sed "s/$1/$(echo "$2" | sed 's/[/\&]/\\&/g;$!s/$/\\/g')/g"
 }
 
 # Parses the given config file and writes the env config:
