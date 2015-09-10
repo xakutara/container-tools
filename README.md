@@ -25,20 +25,20 @@ environments and non-containerized Linux machines.
 ## Tools
 
 ### envconfig
-[envconfig.sh](bin/envconfig.sh) is a wrapper script to write environment variables in config files.
-It replaces placeholders and creates files, then starts the given command.
+[envconfig.sh](bin/envconfig.sh) is a wrapper script to write environment
+variables in config files.  
+It replaces placeholders and creates files, then starts the given command.  
+It supports multiline variables and base64 encoded data.
 
 #### Usage
 
 ```sh
-./envconfig.sh [-e config_env] [-f config_file] [command] [args...]
+./envconfig.sh [-f config_file] [command] [args...]
 ```
 
 #### Configuration
 The default envconfig configuration file is `/usr/local/etc/envconfig.conf`.  
 An alternate configuration file can be provided via `-f` option.  
-An environment variable with configuration can be provided via `-e` option.  
-Mappings provided via environment variable will be written first.
 
 Each line of the configuration for envconfig must have the following format:
 
@@ -54,6 +54,12 @@ Placeholders in config files must have the following format:
 ```
 {{VARIABLE_NAME}}
 ```
+
+Variable content can be provided in base64 encoded form,
+given the following:  
+The base64 data must be provided in a variable with `B64_` prefix.  
+The decoded data will then be used for the variable without the prefix.  
+For example, the content of `$B64_DATA` will be decoded and used as `$DATA`.
 
 ### log
 [log.sh](bin/log.sh) executes the given command and logs the output.  
@@ -81,7 +87,8 @@ DATECMD="date -u +%Y-%m-%dT%H:%M:%SZ"
 ```
 
 ### superd
-[superd.sh](bin/superd.sh) is a supervisor daemon to manage long running processes as a group.  
+[superd.sh](bin/superd.sh) is a supervisor daemon to manage long running
+processes as a group.  
 All remaining child processes are terminated as soon as one child exits.  
 Written as entrypoint service for multi-process docker containers.
 

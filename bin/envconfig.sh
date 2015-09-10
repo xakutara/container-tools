@@ -21,7 +21,7 @@
 # Variable content can be provided in base64 encoded form, given the following:
 # The base64 data must be provided in a variable with "B64_" prefix.
 # The decoded data will then be used for the variable without the prefix.
-# For example, the content of $B64_DATA will be decoded and stored in $DATA.
+# For example, the content of $B64_DATA will be decoded and used as $DATA.
 #
 # Copyright 2015, Sebastian Tschan
 # https://blueimp.net
