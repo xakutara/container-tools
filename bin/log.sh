@@ -2,18 +2,22 @@
 
 #
 # Executes the given command and logs the output.
-# Adds a datetime prefix in front of each output line.
+# Adds a datetime and PID prefix in front of each output line.
 # Also logs the effective user and given command line.
 #
 # Usage: ./log.sh command [args...]
 #
 # The location of the log output can be defined
 # with the following environment variable:
-# LOGFILE="/dev/stdout"
+# LOGFILE='/dev/stdout'
 #
 # The date output formatting can be defined
 # with the following environment variable:
-# DATECMD="date -u +%Y-%m-%dT%H:%M:%SZ"
+# DATECMD='date -u +%Y-%m-%dT%H:%M:%SZ'
+#
+# The PID printf format can be defined
+# with the following environment variable:
+# PIDFORM='(%05d)'
 #
 # Copyright 2015, Sebastian Tschan
 # https://blueimp.net
@@ -25,10 +29,11 @@
 # Define default values:
 [ -z "$LOGFILE" ] && LOGFILE=/dev/stdout
 [ -z "$DATECMD" ] && DATECMD='date -u +%Y-%m-%dT%H:%M:%SZ'
+[ -z "$PIDFORM" ] && PIDFORM='(%05d)'
 
-# Adds the given arguments with a datetime prefix to the logfile:
+# Adds the given arguments with a datetime and PID prefix to the logfile:
 log() {
-  echo "$($DATECMD) [$1] $2" >> $LOGFILE
+  echo "$($DATECMD) $(printf "$PIDFORM" $$) [$1] $2" >> $LOGFILE
 }
 
 # Processes stdin and logs each line:
