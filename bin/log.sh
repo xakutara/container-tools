@@ -3,6 +3,7 @@
 #
 # Executes the given command and logs the output.
 # Adds a datetime prefix in front of each output line.
+# Also logs the effective user and given command line.
 #
 # Usage: ./log.sh command [args...]
 #
@@ -53,6 +54,9 @@ quote() {
   done
   echo "$args"
 }
+
+# Log the effective user:
+log usr "$(whoami)"
 
 # Log the command:
 log cmd "$(quote "$@")"
