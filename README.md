@@ -46,8 +46,15 @@ Each line of the configuration for envconfig must have the following format:
 VARIABLE_NAME /absolute/path/to/config/file
 ```
 
-Empty lines and lines starting with a hash (`#`) will be ignored.
+Empty lines and lines starting with a hash (`#`) will be ignored.  
 Multiple mappings of the same `VARIABLE_NAME` or path are possible.
+
+If the variable name is prefixed with an exclamation mark, the variable will be
+unset before the given command is run:
+
+```
+!VARIABLE_NAME /absolute/path/to/config/file
+```
 
 Placeholders in config files must have the following format:
 

@@ -15,6 +15,9 @@
 # Empty lines and lines starting with a hash (#) will be ignored.
 # Multiple mappings of the same VARIABLE_NAME or path are possible.
 #
+# If the variable name is prefixed with an exclamation mark (!VARIABLE_NAME),
+# the variable will be unset before the given command is run.
+#
 # Placeholders in config files must have the following format:
 # {{VARIABLE_NAME}}
 #
@@ -33,19 +36,22 @@
 # Exit immediately if a command exits with a non-zero status:
 set -e
 
-# Determine the platform dependent base64 decode argument:
-if [ "$(echo 'eA==' | base64 -d 2> /dev/null)" = 'x' ]; then
-  BASE64_DECODE_ARG='-d'
-else
-  BASE64_DECODE_ARG='--decode'
-fi
+# Returns the platform dependent base64 decode argument:
+b64_decode_arg() {
+  # Determine the platform dependent base64 decode argument:
+  if [ "$(echo 'eA==' | base64 -d 2> /dev/null)" = 'x' ]; then
+    echo '-d'
+  else
+    echo '--decode'
+  fi
+}
 
-# Interpolates the given name:
+# Interpolates the given variable name:
 interpolate() {
   # Check if a variable with the given name plus "B64_" prefix exists:
   if eval 'test ! -z "${B64_'$1'+x}"'; then
-    # Return the decoded content of the "B64_" variable:
-    eval 'echo "$B64_'$1'"' | tr -d '\n' | base64 "$BASE64_DECODE_ARG"
+    # Return the decoded content of the "B64_" prefixed variable:
+    eval 'echo "$B64_'$1'"' | tr -d '\n' | base64 "$B64_DECODE_ARG"
   else
     # Interpolate the name as environment variable, print to stderr if unset:
     eval 'printf "%s" "${'$1'?}"'
@@ -62,12 +68,24 @@ gsub() {
 
 # Parses the given config file and writes the env config:
 write_envconfig() {
+  # Store variables to unset in a space-separated list:
+  local unset_variables=''
+  # Set the platform dependent base64 decode argument:
+  local B64_DECODE_ARG="$(b64_decode_arg)"
+  # Iterate over each line of the config file:
   while read line; do
     # Skip empty lines and lines starting with a hash (#):
     ([ -z "$line" ] || [ "${line#\#}" != "$line" ]) && continue
     # Extract the substring up to the first space as variable name:
     local name="${line%% *}"
-    # Extract the remainder as path and trim any surrounding whitespace:
+    # Check if the variable should be unset (indicated by an exclamation mark):
+    if [ "${name#!}" != "$name" ]; then
+      # Remove the exclamation mark prefix:
+      name="${name#!}"
+      # Store the name and its "B64_" version in the list of variables to unset:
+      unset_variables="$unset_variables $name B64_$name"
+    fi
+    # Extract the substring after the first space as file path:
     local path="$(echo ${line#* })"
     # Check if the file exists and has a size greater than zero:
     if [ -s "$path" ]; then
@@ -84,6 +102,8 @@ write_envconfig() {
     fi
   # Use the given config file as input:
   done < "$1"
+  # Unset the given variables:
+  unset $unset_variables
 }
 
 # Check if the config file is provided via command line:
