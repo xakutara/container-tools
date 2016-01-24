@@ -12,11 +12,13 @@
 #
 # Each line of the configuration for envconfig must have the following format:
 # VARIABLE_NAME /absolute/path/to/config/file
+#
+# Each mapped variable will be unset before the command given to envconfig is
+# run, unless the variable name is prefixed with an exclamation mark:
+# !VARIABLE_NAME /absolute/path/to/config/file
+#
 # Empty lines and lines starting with a hash (#) will be ignored.
 # Multiple mappings of the same VARIABLE_NAME or path are possible.
-#
-# If the variable name is prefixed with an exclamation mark (!VARIABLE_NAME),
-# the variable will be unset before the given command is run.
 #
 # Placeholders in config files must have the following format:
 # {{VARIABLE_NAME}}
@@ -78,12 +80,13 @@ write_envconfig() {
     ([ -z "$line" ] || [ "${line#\#}" != "$line" ]) && continue
     # Extract the substring up to the first space as variable name:
     local name="${line%% *}"
-    # Check if the variable should be unset (indicated by an exclamation mark):
-    if [ "${name#!}" != "$name" ]; then
-      # Remove the exclamation mark prefix:
-      name="${name#!}"
+    # Check if the variable should be unset (no exclamation mark prefix):
+    if [ "${name#!}" = "$name" ]; then
       # Store the name and its "B64_" version in the list of variables to unset:
       unset_variables="$unset_variables $name B64_$name"
+    else
+      # Remove the exclamation mark prefix:
+      name="${name#!}"
     fi
     # Extract the substring after the first space as file path:
     local path="$(echo ${line#* })"
