@@ -23,40 +23,13 @@
 # http://www.opensource.org/licenses/MIT
 #
 
-# Create the directory to store the PIDs for the superd child processes:
-mkdir -p /run/superd
+# The list of pids for the background processes:
+PIDS=''
 
-# Terminates remaining child processes:
-shutdown() {
-  # Create a lock or return if it already exists:
-  mkdir /run/superd/shutdown.lock 2> /dev/null || return
-  # A loop allows us to use a wildcard pattern to check for multiple files:
-  for file in /run/superd/*.pid; do
-    # If no files are found, the unexpanded pattern is returned as result:
-    [ "$file" = '/run/superd/*.pid' ] && break
-    # Terminate remaining processes, ignore stdout and stderr output:
-    kill $(cat /run/superd/*.pid) > /dev/null 2>&1
-    # Remove the obsolete PID files:
-    rm /run/superd/*.pid
-    # Break, as we only need to run the shutdown sequence once:
-    break
-  done
-  # Remove the lock:
-  rmdir /run/superd/shutdown.lock
-}
-
-# Runs a given command and terminates sibling processes on exit:
+# Runs the given command in a background process and stores the pid:
 run() {
-  # Start the given command as background process:
   "$@" &
-  # Get the PID of the background process:
-  local pid=$!
-  # Store the PID with the checksum of the exact command as file name:
-  echo $pid > /run/superd/"$(printf '%s' "$@" | sha1sum | cut -f1 -d' ')".pid
-  # Wait for the background process to terminate:
-  wait $pid
-  # Terminate remaining child processes:
-  shutdown
+  PIDS="$PIDS $!"
 }
 
 # Runs commands defined in the given config file:
@@ -64,17 +37,57 @@ startup() {
   while read line; do
     # Skip empty lines and lines starting with a hash (#):
     ([ -z "$line" ] || [ "${line#\#}" != "$line" ]) && continue
-    # Call the run function with the line components as arguments:
-    eval "run $line" &
+    # Run the given command line:
+    eval "run $line"
   # Use the given config file as input:
   done < "$1"
 }
 
-# Terminate child processes on SIGINT and SIGTERM:
+# Returns all given processes and their descendants tree as flat list:
+collect() {
+  local pid
+  for pid in $@; do
+    printf ' %s' $pid
+    collect $(pgrep -P $pid)
+  done
+}
+
+# Terminates the given list of processes:
+terminate() {
+  local pid
+  for pid in $@; do
+    # Terminate the given process, ignore stdout and stderr output:
+    kill $pid > /dev/null 2>&1
+    # Wait for the process to stop:
+    wait $pid
+  done
+}
+
+# Initiates a shutdown by terminating the tree of child processes:
+shutdown() {
+  terminate $(collect $(pgrep -P $$))
+}
+
+# Monitors the started background processes until one of them exits:
+monitor() {
+  local pid
+  while true; do
+    for pid in $PIDS; do
+      # Return if the given process is not running:
+      ! kill -s 0 $pid > /dev/null 2>&1 && return
+    done
+    sleep 1
+  done
+}
+
+# Initiate a shutdown on SIGINT and SIGTERM:
 trap 'shutdown; exit' INT TERM
 
-# Use "/usr/local/etc/superd.conf" as default config file:
-startup "${1:-/usr/local/etc/superd.conf}"
+# Start the commands defined in the given or the default config file:
+startup "${1:-/usr/local/etc/superd.conf}" || exit $?
 
-# Wait for all child processes to terminate:
-wait
+# Monitor the started background processes until one of them exits:
+monitor
+
+# Initiate a shutdown:
+shutdown
