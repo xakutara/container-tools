@@ -9,7 +9,11 @@
 #
 # The location of the log output can be defined
 # with the following environment variable:
-# LOGFILE='/dev/stdout'
+# LOGFILE='/var/log/out.log'
+#
+# The error log can also be piped into a separate file
+# defined by the following environment variable:
+# ERRFILE='/var/log/err.log'
 #
 # The date output formatting can be defined
 # with the following environment variable:
@@ -27,19 +31,49 @@
 #
 
 # Define default values:
-[ -z "$LOGFILE" ] && LOGFILE=/dev/stdout
+[ -z "$ERRFILE" ] && ERRFILE="$LOGFILE"
 [ -z "$DATECMD" ] && DATECMD='date -u +%Y-%m-%dT%H:%M:%SZ'
 [ -z "$PIDFORM" ] && PIDFORM='(%05d)'
 
-# Adds the given arguments with a datetime and PID prefix to the logfile:
-log() {
-  echo "$($DATECMD) $(printf "$PIDFORM" $$) [$1] $2" >> $LOGFILE
+# Combines the given arguments with a datetime and PID prefix:
+format() {
+  echo "$($DATECMD) $(printf "$PIDFORM" $$) [$1] $2"
+}
+
+# Logs to stdout:
+out_log() {
+  format "$@"
+}
+
+# Logs to stderr:
+err_log() {
+  format "$@" >&2
+}
+
+# Logs to a file:
+out_file_log() {
+  format "$@" >> "$LOGFILE"
+}
+
+# Logs to the errors file:
+err_file_log() {
+  format "$@" >> "$ERRFILE"
+}
+
+# Returns the defined log output:
+get_log() {
+  printf "${1:-out}"
+  if [ "$1" = 'err' ] && [ ! -z "$ERRFILE" ] || [ ! -z "$LOGFILE" ]; then
+    printf _file
+  fi
+  printf _log
 }
 
 # Processes stdin and logs each line:
 process() {
+  local log=$(get_log "$1")
   while read -r line; do
-    log "$1" "$line"
+    $log "$1" "$line"
   done
 }
 
@@ -61,10 +95,10 @@ quote() {
 }
 
 # Log the effective user:
-log usr "$(whoami)"
+$(get_log) usr "$(whoami)"
 
 # Log the command:
-log cmd "$(quote "$@")"
+$(get_log) cmd "$(quote "$@")"
 
 # Set line buffered mode if the stdbuf command is available:
 if [ $# -gt 0 ] && command -v stdbuf > /dev/null 2>&1; then
