@@ -1,4 +1,5 @@
 #!/bin/sh
+# shellcheck shell=dash
 
 #
 # Wrapper script to write environment variables in config files.
@@ -42,21 +43,21 @@ set -e
 b64_decode_arg() {
   # Determine the platform dependent base64 decode argument:
   if [ "$(echo 'eA==' | base64 -d 2> /dev/null)" = 'x' ]; then
-    echo '-d'
+    printf %s -d
   else
-    echo '--decode'
+    printf %s --decode
   fi
 }
 
 # Interpolates the given variable name:
 interpolate() {
   # Check if a variable with the given name plus "B64_" prefix exists:
-  if eval 'test ! -z "${B64_'$1'+x}"'; then
+  if eval 'test ! -z "${B64_'"$1"'+x}"'; then
     # Return the decoded content of the "B64_" prefixed variable:
-    eval 'echo "$B64_'$1'"' | tr -d '\n' | base64 "$B64_DECODE_ARG"
+    eval 'echo "$B64_'"$1"'"' | tr -d '\n' | base64 "$B64_DECODE_ARG"
   else
     # Interpolate the name as environment variable, print to stderr if unset:
-    eval 'printf "%s" "${'$1'?}"'
+    eval 'printf "%s" "${'"$1"'?}"'
   fi
 }
 
@@ -73,9 +74,10 @@ write_envconfig() {
   # Store variables to unset in a space-separated list:
   local unset_variables=''
   # Set the platform dependent base64 decode argument:
-  local B64_DECODE_ARG="$(b64_decode_arg)"
+  local B64_DECODE_ARG
+  B64_DECODE_ARG="$(b64_decode_arg)"
   # Iterate over each line of the config file:
-  while read line; do
+  while read -r line; do
     # Skip empty lines and lines starting with a hash (#):
     ([ -z "$line" ] || [ "${line#\#}" != "$line" ]) && continue
     # Extract the substring up to the first space as variable name:
@@ -88,24 +90,26 @@ write_envconfig() {
       # Remove the exclamation mark prefix:
       name="${name#!}"
     fi
-    # Extract the substring after the first space as file path:
-    local path="$(echo ${line#* })"
+    # Extract the substring after the last space as file path:
+    local path="${line##* }"
     # Check if the file exists and has a size greater than zero:
     if [ -s "$path" ]; then
-      local tmpfile="$(mktemp "${TMPDIR:-/tmp}/$name.XXXXXXXXXX")"
+      local tmpfile
+      tmpfile="$(mktemp "${TMPDIR:-/tmp}/$name.XXXXXXXXXX")"
       # Replace the placeholder with the environment variable:
-      cat "$path" | gsub "{{$name}}" "$(interpolate "$name")" > "$tmpfile"
+      gsub "{{$name}}" "$(interpolate "$name")" < "$path" > "$tmpfile"
       # Override the original file without changing permissions or ownership:
       cat "$tmpfile" > "$path" && rm "$tmpfile"
     else
       # Create the path if it doesn't exist:
       mkdir -p "$(dirname "$path")"
       # Set the environment variable as file content:
-      echo "$(interpolate "$name")" >> "$path"
+      interpolate "$name" >> "$path"
     fi
   # Use the given config file as input:
   done < "$1"
   # Unset the given variables:
+	# shellcheck disable=SC2086
   unset $unset_variables
 }
 

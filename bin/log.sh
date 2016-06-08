@@ -1,4 +1,5 @@
 #!/bin/sh
+# shellcheck shell=dash
 
 #
 # Executes the given command and logs the output.
@@ -37,6 +38,7 @@
 
 # Combines the given arguments with a datetime and PID prefix:
 format() {
+	# shellcheck disable=SC2059
   echo "$($DATECMD) $(printf "$PIDFORM" $$) [$1] $2"
 }
 
@@ -62,7 +64,7 @@ err_file_log() {
 
 # Returns the defined log output:
 get_log() {
-  printf "${1:-out}"
+  printf %s "${1:-out}"
   if [ "$1" = 'err' ] && [ ! -z "$ERRFILE" ] || [ ! -z "$LOGFILE" ]; then
     printf _file
   fi
@@ -71,7 +73,8 @@ get_log() {
 
 # Processes stdin and logs each line:
 process() {
-  local log=$(get_log "$1")
+  local log
+  log=$(get_log "$1")
   while read -r line; do
     $log "$1" "$line"
   done

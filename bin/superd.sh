@@ -1,4 +1,5 @@
 #!/bin/sh
+# shellcheck shell=dash
 
 #
 # Supervisor daemon to manage long running processes as a group.
@@ -34,11 +35,12 @@ run() {
 
 # Runs commands defined in the given config file:
 startup() {
-  while read line; do
+  while read -r line; do
     # Skip empty lines and lines starting with a hash (#):
     ([ -z "$line" ] || [ "${line#\#}" != "$line" ]) && continue
     # Run the given command line:
-    eval "run $line"
+  	# shellcheck disable=SC2086
+    run $line
   # Use the given config file as input:
   done < "$1"
 }
@@ -46,25 +48,27 @@ startup() {
 # Returns all given processes and their descendants tree as flat list:
 collect() {
   local pid
-  for pid in $@; do
-    printf ' %s' $pid
-    collect $(pgrep -P $pid)
+  for pid in "$@"; do
+    printf ' %s' "$pid"
+  	# shellcheck disable=SC2046
+    collect $(pgrep -P "$pid")
   done
 }
 
 # Terminates the given list of processes:
 terminate() {
   local pid
-  for pid in $@; do
+  for pid in "$@"; do
     # Terminate the given process, ignore stdout and stderr output:
-    kill $pid > /dev/null 2>&1
+    kill "$pid" > /dev/null 2>&1
     # Wait for the process to stop:
-    wait $pid
+    wait "$pid"
   done
 }
 
 # Initiates a shutdown by terminating the tree of child processes:
 shutdown() {
+  # shellcheck disable=SC2046
   terminate $(collect $(pgrep -P $$))
 }
 
@@ -74,7 +78,7 @@ monitor() {
   while true; do
     for pid in $PIDS; do
       # Return if the given process is not running:
-      ! kill -s 0 $pid > /dev/null 2>&1 && return
+      ! kill -s 0 "$pid" > /dev/null 2>&1 && return
     done
     sleep 1
   done
