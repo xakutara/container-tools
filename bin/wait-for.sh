@@ -40,10 +40,10 @@ wait_for_service() {
     printf 'Error: "%s" is not a valid host:port combination.\n' "$1" >&2
     return 1
   fi
-  printf 'Waiting for %s to become available ... ' "$1"
+  printf 'Waiting for %s to become available ... ' "$1" >&2
   while ! output="$(connect_to_service "$host" "$port" 2>&1)"; do
     if [ $secs -eq $TIMEOUT ]; then
-      echo 'timeout'
+      echo 'timeout' >&2
       if [ ! -z "$output" ]; then
         echo "$output" >&2
       fi
@@ -52,7 +52,7 @@ wait_for_service() {
     secs=$((secs+1));
     sleep 1;
   done;
-  echo 'done'
+  echo 'done' >&2
 }
 
 while [ $# != 0 ]; do
