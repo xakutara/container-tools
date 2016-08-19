@@ -11,6 +11,8 @@
   - [superd](#superd)
     - [Usage](#usage-2)
     - [Configuration](#configuration-2)
+  - [wait-for](#wait-for)
+    - [Usage](#usage-3)
 - [License](#license)
 - [Author](#author)
 
@@ -118,6 +120,21 @@ command [args...]
 Each command will be run by superd as a background process.  
 If one command terminates, all commands will be terminated.  
 Empty lines and lines starting with a hash (`#`) will be ignored.
+
+### wait-for
+[wait-for.sh](bin/wait-for.sh) is a script to wait for the given host(s) to be
+available via TCP before executing a given command.  
+It accepts a number of `host:port` combinations to connect to via
+[netcat](https://en.wikipedia.org/wiki/Netcat).  
+The command to execute after each host is reachable can be supplied after the
+`--` argument.  
+The default timeout of `10` seconds can be changed via `-t timeout` argument.
+
+#### Usage
+
+```sh
+./wait.sh [-t timeout] host:port [host:port] [...] [-- command args...]
+```
 
 ## License
 Released under the [MIT license](http://opensource.org/licenses/MIT).
