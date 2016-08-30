@@ -37,7 +37,7 @@ run() {
 startup() {
   while read -r line; do
     # Skip empty lines and lines starting with a hash (#):
-    ([ -z "$line" ] || [ "${line#\#}" != "$line" ]) && continue
+    [ -z "$line" ] || [ "${line#\#}" != "$line" ] && continue
     # Run the given command line:
   	# shellcheck disable=SC2086
     run $line
