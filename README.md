@@ -137,7 +137,7 @@ The default timeout of `10` seconds can be changed via `-t timeout` argument.
 ```
 
 ## License
-Released under the [MIT license](http://opensource.org/licenses/MIT).
+Released under the [MIT license](https://opensource.org/licenses/MIT).
 
 ## Author
 [Sebastian Tschan](https://blueimp.net/)

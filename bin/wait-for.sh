@@ -16,7 +16,7 @@
 # https://blueimp.net
 #
 # Licensed under the MIT license:
-# http://www.opensource.org/licenses/MIT
+# https://opensource.org/licenses/MIT
 #
 
 set -e
