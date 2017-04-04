@@ -51,6 +51,9 @@ b64_decode_arg() {
 
 # Interpolates the given variable name:
 interpolate() {
+  if [ "$1" = '_' ] || ! expr "$1" : '[a-zA-Z_][a-zA-Z0-9_]*' 1>/dev/null; then
+    echo "Invalid variable name: $1" >&2 && return 1
+  fi
   # Check if a variable with the given name plus "B64_" prefix exists:
   if eval 'test ! -z "${B64_'"$1"'+x}"'; then
     # Return the decoded content of the "B64_" prefixed variable:
