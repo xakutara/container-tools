@@ -29,8 +29,8 @@ environments and non-containerized Linux machines.
 ### envconfig
 [envconfig.sh](bin/envconfig.sh) is a wrapper script to write environment
 variables in config files.  
-It replaces placeholders and creates files, then starts the given command.  
-It supports multiline variables and base64 encoded data.
+Replaces placeholders and creates files, then starts the given command.  
+Supports multiline variables, reading from file paths and base64 encoded data.
 
 #### Usage
 
@@ -64,8 +64,12 @@ Placeholders in config files must have the following format:
 {{VARIABLE_NAME}}
 ```
 
-Variable content can be provided in base64 encoded form,
-given the following:  
+Variable content can be provided from a file location, given the following:  
+The file path must be provided in a variable with `_FILE` suffix.  
+The file contents will then be used for the variable without the prefix.  
+For example, the contents of a file at `$DATA_FILE` will be used as `$DATA`.
+
+Variable content can be provided in base64 encoded form, given the following:  
 The base64 data must be provided in a variable with `B64_` prefix.  
 The decoded data will then be used for the variable without the prefix.  
 For example, the content of `$B64_DATA` will be decoded and used as `$DATA`.

@@ -4,7 +4,7 @@
 #
 # Wrapper script to write environment variables in config files.
 # Replaces placeholders and creates files, then starts the given command.
-# Supports multiline variables and base64 encoded data.
+# Supports multiline variables, reading from file paths and base64 encoded data.
 #
 # Usage: ./envconfig.sh [-f config_file] [command] [args...]
 #
@@ -23,6 +23,11 @@
 #
 # Placeholders in config files must have the following format:
 # {{VARIABLE_NAME}}
+#
+# Variable content can be provided from a file location, given the following:
+# The file path must be provided in a variable with "_FILE" suffix.
+# The file contents will then be used for the variable without the prefix.
+# For example, the contents of a file at $DATA_FILE will be used as $DATA.
 #
 # Variable content can be provided in base64 encoded form, given the following:
 # The base64 data must be provided in a variable with "B64_" prefix.
@@ -54,8 +59,12 @@ interpolate() {
   if [ "$1" = '_' ] || ! expr "$1" : '[a-zA-Z_][a-zA-Z0-9_]*' 1>/dev/null; then
     echo "Invalid variable name: $1" >&2 && return 1
   fi
+  # Check if a variable with the given name plus "_FILE" suffix exists:
+  if eval 'test ! -z "${'"$1"'_FILE+x}"'; then
+    # Read the contents from the interpolated file path:
+    eval 'cat "${'"$1"'_FILE}"'
   # Check if a variable with the given name plus "B64_" prefix exists:
-  if eval 'test ! -z "${B64_'"$1"'+x}"'; then
+  elif eval 'test ! -z "${B64_'"$1"'+x}"'; then
     # Return the decoded content of the "B64_" prefixed variable:
     eval 'echo "$B64_'"$1"'"' | tr -d '\n' | base64 "$B64_DECODE_ARG"
   else
@@ -87,8 +96,8 @@ write_envconfig() {
     local name="${line%% *}"
     # Check if the variable should be unset (no exclamation mark prefix):
     if [ "${name#!}" = "$name" ]; then
-      # Store the name and its "B64_" version in the list of variables to unset:
-      unset_variables="$unset_variables $name B64_$name"
+      # Store the name and its variants in the list of variables to unset:
+      unset_variables="$unset_variables $name ${name}_FILE B64_$name"
     else
       # Remove the exclamation mark prefix:
       name="${name#!}"
